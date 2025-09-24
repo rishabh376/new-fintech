@@ -1,40 +1,58 @@
-variable "region" {
-  description = "The AWS region to deploy the resources"
+variable "azure_location" {
+  description = "The Azure region to deploy resources"
   type        = string
-  default     = "us-east-1"
+  default     = "eastus"
 }
 
-variable "instance_type" {
-  description = "The type of EC2 instance to use"
-  type        = string
-  default     = "t2.micro"
-}
-
-variable "db_username" {
-  description = "The username for the database"
-  type        = string
-}
-
-variable "db_password" {
-  description = "The password for the database"
-  type        = string
-  sensitive   = true
-}
-
-variable "vpc_cidr" {
-  description = "The CIDR block for the VPC"
+variable "vnet_cidr" {
+  description = "The CIDR block for the Azure Virtual Network"
   type        = string
   default     = "10.0.0.0/16"
 }
 
-variable "public_subnet_cidr" {
-  description = "The CIDR block for the public subnet"
+variable "subnet_cidr" {
+  description = "The CIDR block for the Azure Subnet"
   type        = string
   default     = "10.0.1.0/24"
 }
 
-variable "private_subnet_cidr" {
-  description = "The CIDR block for the private subnet"
+variable "environment" {
+  description = "The environment tag for resources"
   type        = string
-  default     = "10.0.2.0/24"
+  default     = "dev"
+}
+
+variable "vm_size" {
+  description = "The size of the Azure Virtual Machine"
+  type        = string
+  default     = "Standard_B1s"
+}
+
+variable "admin_username" {
+  description = "Admin username for the VM"
+  type        = string
+  default     = "azureuser"
+}
+
+variable "admin_ssh_public_key" {
+  description = "SSH public key for the VM admin user"
+  type        = string
+}
+
+variable "image_publisher" {
+  description = "Publisher of the VM image"
+  type        = string
+  default     = "Canonical"
+}
+
+variable "image_offer" {
+  description = "Offer of the VM image"
+  type        = string
+  default     = "UbuntuServer"
+}
+
+variable "image_sku" {
+  description = "SKU of the VM image"
+  type        = string
+  default     = "18.04-LTS"
 }
