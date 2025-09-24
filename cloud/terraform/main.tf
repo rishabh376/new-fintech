@@ -1,89 +1,162 @@
-provider "aws" {
-  region = var.aws_region
+terraform {
+  required_version = ">= 1.3.0"
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = ">= 3.0.0"
+    }
+  }
+  backend "azurerm" {
+    resource_group_name  = "tfstate-rg"
+    storage_account_name = "tfstatestorageacct"
+    container_name       = "tfstate"
+    key                  = "fintech-devops-app.terraform.tfstate"
+  }
 }
 
-resource "aws_vpc" "fintech_vpc" {
-  cidr_block           = var.vpc_cidr
-  enable_dns_support   = true
-  enable_dns_hostnames = true
+data "azurerm_client_config" "current" {}
+
+provider "azurerm" {
+  features {}
+  subscription_id = data.azurerm_client_config.current.subscription_id
+}
+
+resource "azurerm_resource_group" "fintech_rg" {
+  name     = "fintech-rg"
+  location = var.azure_location
+}
+
+resource "azurerm_virtual_network" "fintech_vnet" {
+  name                = "FintechVNet"
+  address_space       = [var.vnet_cidr]
+  location            = azurerm_resource_group.fintech_rg.location
+  resource_group_name = azurerm_resource_group.fintech_rg.name
 
   tags = {
-    Name = "FintechVPC"
     Environment = var.environment
   }
 }
 
-resource "aws_subnet" "fintech_subnet" {
-  vpc_id                  = aws_vpc.fintech_vpc.id
-  cidr_block              = var.subnet_cidr
-  availability_zone       = var.availability_zone
-  map_public_ip_on_launch = true
+resource "azurerm_subnet" "fintech_subnet" {
+  name                 = "FintechSubnet"
+  resource_group_name  = azurerm_resource_group.fintech_rg.name
+  virtual_network_name = azurerm_virtual_network.fintech_vnet.name
+  address_prefixes     = [var.subnet_cidr]
+}
+
+resource "azurerm_network_security_group" "fintech_nsg" {
+  name                = "FintechNSG"
+  location            = azurerm_resource_group.fintech_rg.location
+  resource_group_name = azurerm_resource_group.fintech_rg.name
+
+  security_rule {
+    name                       = "AllowHTTP"
+    priority                   = 100
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "80"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
+
+  security_rule {
+    name                       = "AllowHTTPS"
+    priority                   = 110
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "443"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
+
+  security_rule {
+    name                       = "AllowSSH"
+    priority                   = 120
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "22"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
 
   tags = {
-    Name = "FintechSubnet"
     Environment = var.environment
   }
 }
 
-resource "aws_security_group" "fintech_sg" {
-  name        = "FintechSG"
-  description = "Allow HTTP and HTTPS"
-  vpc_id      = aws_vpc.fintech_vpc.id
+resource "azurerm_public_ip" "fintech_public_ip" {
+  name                = "FintechPublicIP"
+  location            = azurerm_resource_group.fintech_rg.location
+  resource_group_name = azurerm_resource_group.fintech_rg.name
+  allocation_method   = "Dynamic"
+}
 
-  ingress {
-    description = "HTTP"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+resource "azurerm_network_interface" "fintech_nic" {
+  name                = "FintechNIC"
+  location            = azurerm_resource_group.fintech_rg.location
+  resource_group_name = azurerm_resource_group.fintech_rg.name
+
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = azurerm_subnet.fintech_subnet.id
+    private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.fintech_public_ip.id
+  }
+}
+
+resource "azurerm_network_interface_security_group_association" "fintech_nic_nsg" {
+  network_interface_id      = azurerm_network_interface.fintech_nic.id
+  network_security_group_id = azurerm_network_security_group.fintech_nsg.id
+}
+
+resource "azurerm_linux_virtual_machine" "fintech_vm" {
+  name                = "FintechVM"
+  resource_group_name = azurerm_resource_group.fintech_rg.name
+  location            = azurerm_resource_group.fintech_rg.location
+  size                = var.vm_size
+  admin_username      = var.admin_username
+  network_interface_ids = [azurerm_network_interface.fintech_nic.id]
+
+  admin_ssh_key {
+    username   = var.admin_username
+    public_key = var.admin_ssh_public_key
   }
 
-  ingress {
-    description = "HTTPS"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
   }
 
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+  source_image_reference {
+    publisher = var.image_publisher
+    offer     = var.image_offer
+    sku       = var.image_sku
+    version   = "latest"
   }
 
   tags = {
-    Name = "FintechSG"
     Environment = var.environment
   }
 }
 
-resource "aws_instance" "fintech_app" {
-  ami                         = var.ami_id
-  instance_type               = var.instance_type
-  subnet_id                   = aws_subnet.fintech_subnet.id
-  security_group_ids          = [aws_security_group.fintech_sg.id]
-  associate_public_ip_address = true
-
-  tags = {
-    Name = "FintechAppInstance"
-    Environment = var.environment
-  }
-}
-
-output "vpc_id" {
-  value = aws_vpc.fintech_vpc.id
+output "vnet_id" {
+  value = azurerm_virtual_network.fintech_vnet.id
 }
 
 output "subnet_id" {
-  value = aws_subnet.fintech_subnet.id
+  value = azurerm_subnet.fintech_subnet.id
 }
 
-output "security_group_id" {
-  value = aws_security_group.fintech_sg.id
+output "nsg_id" {
+  value = azurerm_network_security_group.fintech_nsg.id
 }
 
-output "instance_id" {
-  value = aws_instance.fintech_app.id
+output "vm_id" {
+  value = azurerm_linux_virtual_machine.fintech_vm.id
 }
