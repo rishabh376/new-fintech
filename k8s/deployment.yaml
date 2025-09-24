@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fintech-app
+  labels:
+    app: fintech
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: fintech
+  template:
+    metadata:
+      labels:
+        app: fintech
+    spec:
+      containers:
+      - name: fintech-container
+        image: your-docker-repo/fintech-app:latest
+        ports:
+        - containerPort: 5000
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
