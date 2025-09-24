@@ -1,29 +1,29 @@
-output "vnet_id" {
-  description = "The ID of the Azure Virtual Network"
-  value       = azurerm_virtual_network.fintech_vnet.id
+output "network_id" {
+  description = "The ID of the OpenStack Network"
+  value       = openstack_networking_network_v2.fintech_net.id
 }
 
 output "subnet_id" {
-  description = "The ID of the Azure Subnet"
-  value       = azurerm_subnet.fintech_subnet.id
+  description = "The ID of the OpenStack Subnet"
+  value       = openstack_networking_subnet_v2.fintech_subnet.id
 }
 
-output "nsg_id" {
-  description = "The ID of the Azure Network Security Group"
-  value       = azurerm_network_security_group.fintech_nsg.id
+output "security_group_id" {
+  description = "The ID of the OpenStack Security Group"
+  value       = openstack_networking_secgroup_v2.fintech_secgroup.id
 }
 
 output "vm_id" {
-  description = "The ID of the Azure Virtual Machine"
-  value       = azurerm_linux_virtual_machine.fintech_vm.id
+  description = "The ID of the OpenStack Virtual Machine"
+  value       = openstack_compute_instance_v2.fintech_vm.id
 }
 
-output "public_ip_address" {
-  description = "The public IP address of the VM"
-  value       = azurerm_public_ip.fintech_public_ip.ip_address
+output "vm_name" {
+  description = "The name of the OpenStack Virtual Machine"
+  value       = openstack_compute_instance_v2.fintech_vm.name
 }
 
 output "admin_username" {
   description = "The admin username for SSH access"
-  value       = var.admin_username
+  value       = var.os_username
 }

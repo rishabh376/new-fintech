@@ -1,162 +1,79 @@
 terraform {
-  required_version = ">= 1.3.0"
   required_providers {
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = ">= 3.0.0"
+    openstack = {
+      source  = "terraform-provider-openstack/openstack"
+      version = ">= 1.51.0"
     }
   }
-  backend "azurerm" {
-    resource_group_name  = "tfstate-rg"
-    storage_account_name = "tfstatestorageacct"
-    container_name       = "tfstate"
-    key                  = "fintech-devops-app.terraform.tfstate"
+}
+
+provider "openstack" {
+  user_name   = var.os_username
+  tenant_name = var.os_tenant_name
+  password    = var.os_password
+  auth_url    = var.os_auth_url
+  region      = var.os_region
+}
+
+resource "openstack_networking_network_v2" "fintech_net" {
+  name = "fintech-net"
+}
+
+resource "openstack_networking_subnet_v2" "fintech_subnet" {
+  name            = "fintech-subnet"
+  network_id      = openstack_networking_network_v2.fintech_net.id
+  cidr            = var.subnet_cidr
+  ip_version      = 4
+  gateway_ip      = var.gateway_ip
+}
+
+resource "openstack_compute_keypair_v2" "fintech_key" {
+  name       = "fintech-key"
+  public_key = var.admin_ssh_public_key
+}
+
+resource "openstack_compute_instance_v2" "fintech_vm" {
+  name            = "fintech-vm"
+  image_name      = var.image_name
+  flavor_name     = var.flavor_name
+  key_pair        = openstack_compute_keypair_v2.fintech_key.name
+  security_groups = [openstack_networking_secgroup_v2.fintech_secgroup.name]
+
+  network {
+    uuid = openstack_networking_network_v2.fintech_net.id
   }
 }
 
-data "azurerm_client_config" "current" {}
-
-provider "azurerm" {
-  features {}
-  subscription_id = data.azurerm_client_config.current.subscription_id
+resource "openstack_networking_secgroup_v2" "fintech_secgroup" {
+  name = "fintech-secgroup"
 }
 
-resource "azurerm_resource_group" "fintech_rg" {
-  name     = "fintech-rg"
-  location = var.azure_location
+resource "openstack_networking_secgroup_rule_v2" "allow_ssh" {
+  direction         = "ingress"
+  ethertype         = "IPv4"
+  protocol          = "tcp"
+  port_range_min    = 22
+  port_range_max    = 22
+  remote_ip_prefix  = "0.0.0.0/0"
+  security_group_id = openstack_networking_secgroup_v2.fintech_secgroup.id
 }
 
-resource "azurerm_virtual_network" "fintech_vnet" {
-  name                = "FintechVNet"
-  address_space       = [var.vnet_cidr]
-  location            = azurerm_resource_group.fintech_rg.location
-  resource_group_name = azurerm_resource_group.fintech_rg.name
-
-  tags = {
-    Environment = var.environment
-  }
+resource "openstack_networking_secgroup_rule_v2" "allow_http" {
+  direction         = "ingress"
+  ethertype         = "IPv4"
+  protocol          = "tcp"
+  port_range_min    = 80
+  port_range_max    = 80
+  remote_ip_prefix  = "0.0.0.0/0"
+  security_group_id = openstack_networking_secgroup_v2.fintech_secgroup.id
 }
 
-resource "azurerm_subnet" "fintech_subnet" {
-  name                 = "FintechSubnet"
-  resource_group_name  = azurerm_resource_group.fintech_rg.name
-  virtual_network_name = azurerm_virtual_network.fintech_vnet.name
-  address_prefixes     = [var.subnet_cidr]
-}
-
-resource "azurerm_network_security_group" "fintech_nsg" {
-  name                = "FintechNSG"
-  location            = azurerm_resource_group.fintech_rg.location
-  resource_group_name = azurerm_resource_group.fintech_rg.name
-
-  security_rule {
-    name                       = "AllowHTTP"
-    priority                   = 100
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "80"
-    source_address_prefix      = "*"
-    destination_address_prefix = "*"
-  }
-
-  security_rule {
-    name                       = "AllowHTTPS"
-    priority                   = 110
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "443"
-    source_address_prefix      = "*"
-    destination_address_prefix = "*"
-  }
-
-  security_rule {
-    name                       = "AllowSSH"
-    priority                   = 120
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "22"
-    source_address_prefix      = "*"
-    destination_address_prefix = "*"
-  }
-
-  tags = {
-    Environment = var.environment
-  }
-}
-
-resource "azurerm_public_ip" "fintech_public_ip" {
-  name                = "FintechPublicIP"
-  location            = azurerm_resource_group.fintech_rg.location
-  resource_group_name = azurerm_resource_group.fintech_rg.name
-  allocation_method   = "Dynamic"
-}
-
-resource "azurerm_network_interface" "fintech_nic" {
-  name                = "FintechNIC"
-  location            = azurerm_resource_group.fintech_rg.location
-  resource_group_name = azurerm_resource_group.fintech_rg.name
-
-  ip_configuration {
-    name                          = "internal"
-    subnet_id                     = azurerm_subnet.fintech_subnet.id
-    private_ip_address_allocation = "Dynamic"
-    public_ip_address_id          = azurerm_public_ip.fintech_public_ip.id
-  }
-}
-
-resource "azurerm_network_interface_security_group_association" "fintech_nic_nsg" {
-  network_interface_id      = azurerm_network_interface.fintech_nic.id
-  network_security_group_id = azurerm_network_security_group.fintech_nsg.id
-}
-
-resource "azurerm_linux_virtual_machine" "fintech_vm" {
-  name                = "FintechVM"
-  resource_group_name = azurerm_resource_group.fintech_rg.name
-  location            = azurerm_resource_group.fintech_rg.location
-  size                = var.vm_size
-  admin_username      = var.admin_username
-  network_interface_ids = [azurerm_network_interface.fintech_nic.id]
-
-  admin_ssh_key {
-    username   = var.admin_username
-    public_key = var.admin_ssh_public_key
-  }
-
-  os_disk {
-    caching              = "ReadWrite"
-    storage_account_type = "Standard_LRS"
-  }
-
-  source_image_reference {
-    publisher = var.image_publisher
-    offer     = var.image_offer
-    sku       = var.image_sku
-    version   = "latest"
-  }
-
-  tags = {
-    Environment = var.environment
-  }
-}
-
-output "vnet_id" {
-  value = azurerm_virtual_network.fintech_vnet.id
-}
-
-output "subnet_id" {
-  value = azurerm_subnet.fintech_subnet.id
-}
-
-output "nsg_id" {
-  value = azurerm_network_security_group.fintech_nsg.id
-}
-
-output "vm_id" {
-  value = azurerm_linux_virtual_machine.fintech_vm.id
+resource "openstack_networking_secgroup_rule_v2" "allow_https" {
+  direction         = "ingress"
+  ethertype         = "IPv4"
+  protocol          = "tcp"
+  port_range_min    = 443
+  port_range_max    = 443
+  remote_ip_prefix  = "0.0.0.0/0"
+  security_group_id = openstack_networking_secgroup_v2.fintech_secgroup.id
 }
