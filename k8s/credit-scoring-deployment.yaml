@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: credit-scoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: credit-scoring
+  template:
+    metadata:
+      labels:
+        app: credit-scoring
+    spec:
+      containers:
+      - name: credit-scoring
+        image: your-docker-repo/credit-scoring:latest
+        ports:
+        - containerPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: credit-scoring
+spec:
+  type: ClusterIP
+  selector:
+    app: credit-scoring
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
