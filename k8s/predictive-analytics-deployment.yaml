@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: predictive-analytics
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: predictive-analytics
+  template:
+    metadata:
+      labels:
+        app: predictive-analytics
+    spec:
+      containers:
+      - name: predictive-analytics
+        image: your-docker-repo/predictive-analytics:latest
+        ports:
+        - containerPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: predictive-analytics
+spec:
+  type: ClusterIP
+  selector:
+    app: predictive-analytics
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
