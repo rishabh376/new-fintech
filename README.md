@@ -1,12 +1,12 @@
-# 🚀 Fintech DevOps App on OpenStack
+# 🚀 Fintech DevOps App on AWS
 
-> **Automate. Containerize. Scale. Empower your fintech innovation with AI microservices and cloud-native DevOps!**
+> **Automate. Containerize. Scale. Empower your fintech innovation with AI microservices and cloud-native DevOps on AWS!**
 
 ---
 
 ## 🌟 What Does This App Do?
 
-The **Fintech DevOps App** is a cloud-native platform designed for financial technology solutions. It automates the provisioning of cloud infrastructure on OpenStack, deploys a secure and scalable fintech application, and integrates multiple AI-powered microservices for advanced financial analytics.
+The **Fintech DevOps App** is a cloud-native platform designed for financial technology solutions. It automates the provisioning of cloud infrastructure on AWS, deploys a secure and scalable fintech application, and integrates multiple AI-powered microservices for advanced financial analytics.
 
 **Key AI Features:**
 - **Fraud Detection:** Instantly flag suspicious transactions to reduce financial risk.
@@ -25,18 +25,18 @@ The **Fintech DevOps App** is a cloud-native platform designed for financial tec
 - **Optimized Investments:** Portfolio optimization helps users make smarter investment decisions.
 - **Data-Driven Insights:** Predictive analytics empower businesses to anticipate trends and make informed decisions.
 - **Scalability & Automation:** Infrastructure as Code and Kubernetes orchestration allow rapid scaling and easy management.
-- **Cost Efficiency:** OpenStack and containerization reduce infrastructure costs and improve resource utilization.
+- **Cost Efficiency:** AWS and containerization reduce infrastructure costs and improve resource utilization.
 
 ---
 
 ## 🛠️ Prerequisites
 
-- ✅ OpenStack account & API credentials (`os_username`, `os_password`, `os_auth_url`, `os_tenant_name`, `os_region`)
+- ✅ AWS account & credentials
 - ✅ [Terraform](https://developer.hashicorp.com/terraform/downloads)
 - ✅ [kubectl](https://kubernetes.io/docs/tasks/tools/)
-- ✅ SSH key pair for VM access
+- ✅ SSH key pair for EC2 access
 - ✅ [Docker](https://docs.docker.com/get-docker/) (for building/pushing images)
-- ✅ Access to a container registry (e.g., Docker Hub)
+- ✅ Access to a container registry (e.g., Docker Hub, Amazon ECR)
 
 ---
 
@@ -56,16 +56,13 @@ cd fintech-devops-app
 Edit `cloud/terraform/terraform.tfvars`:
 
 ```hcl
-os_username          = "your-openstack-username"
-os_password          = "your-openstack-password"
-os_auth_url          = "https://your-openstack-auth-url"
-os_tenant_name       = "your-tenant-name"
-os_region            = "your-region"
+aws_region           = "Your region"
+aws_availability_zone = "Your zone"
+vpc_cidr             = "Your vpc cidr"
+subnet_cidr          = "Your subnet cidr"
 admin_ssh_public_key = "ssh-rsa AAAA...your-public-key..."
-image_name           = "Ubuntu 18.04"
-flavor_name          = "m1.small"
-subnet_cidr          = "10.0.1.0/24"
-gateway_ip           = "10.0.1.1"
+ami_id               = "Your ami id"
+instance_type        = "Your instance type"
 ```
 
 ---
@@ -78,90 +75,96 @@ terraform init
 terraform apply
 ```
 
-- This will create a network, subnet, security group, and a Linux VM.
-- Outputs will show the VM name and admin username.
+- This will create a VPC, subnet, security group, and a Linux EC2 instance.
+- Outputs will show the instance ID and public IP.
 
 ---
 
-### 4️⃣ SSH into the VM
+### 4️⃣ SSH into the EC2 Instance
 
-Get the VM's floating/public IP from your OpenStack dashboard or via CLI, then:
+Get the public IP from Terraform output or AWS Console:
 
 ```sh
-ssh <admin_username>@<vm_public_ip>
+ssh ec2-user@<instance_public_ip>
 ```
 
 ---
 
-### 5️⃣ Install Kubernetes on the VM
-
-On the VM, install Docker and Kubernetes (kubeadm):
+### 5️⃣ Install Kubernetes on the EC2 Instance
 
 ```sh
-# On Ubuntu 18.04+
-sudo apt-get update
-sudo apt-get install -y docker.io
+# Update & install Docker
+sudo yum update -y
+sudo amazon-linux-extras install docker
 sudo systemctl enable docker
 sudo systemctl start docker
 
-# Install kubeadm, kubelet, kubectl
-sudo apt-get install -y apt-transport-https ca-certificates curl
-sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
-echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
-sudo apt-get update
-sudo apt-get install -y kubelet kubeadm kubectl
-sudo apt-mark hold kubelet kubeadm kubectl
+# Install Kubernetes tools
+curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl"
+chmod +x ./kubectl
+sudo mv ./kubectl /usr/local/bin/kubectl
 
+# Install kubeadm and kubelet (see official docs for Amazon Linux)
 # Initialize Kubernetes (single node)
 sudo kubeadm init --pod-network-cidr=10.244.0.0/16
 
-# Set up kubectl for your user
+# Configure kubectl
 mkdir -p $HOME/.kube
 sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
 
-# Install a pod network (e.g., Flannel)
+# Install Flannel network
 kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
 ```
 
 ---
 
-### 6️⃣ Build and Push Docker Image
+### 6️⃣ Build and Push Docker Images
 
-Build your application Docker image and push it to a registry:
+Build and push your app and AI microservices:
 
 ```sh
+# Main fintech app
+cd fintech-app
 docker build -t your-docker-repo/fintech-app:latest .
 docker push your-docker-repo/fintech-app:latest
+
+# AI microservices (repeat for each)
+cd ../ai-services/fraud_detection
+docker build -t your-docker-repo/fraud-detection:latest .
+docker push your-docker-repo/fraud-detection:latest
+# ...repeat for other AI services
 ```
 
-Update `k8s/deployment.yaml` with your image name.
+Update image names in `k8s/deployment.yaml` and other manifests.
 
 ---
 
-### 7️⃣ Deploy the Application to Kubernetes
+### 7️⃣ Deploy to Kubernetes
 
 ```sh
 kubectl apply -f k8s/deployment.yaml
-kubectl expose deployment fintech-app --type=NodePort --port=5000
-kubectl get services
+kubectl apply -f k8s/service.yaml
+kubectl apply -f k8s/ingress.yaml
+
+# AI microservices
+kubectl apply -f k8s/fraud-detection-deployment.yaml
+kubectl apply -f k8s/virtual-assistant-deployment.yaml
+kubectl apply -f k8s/credit-scoring-deployment.yaml
+kubectl apply -f k8s/portfolio-optimization-deployment.yaml
+kubectl apply -f k8s/predictive-analytics-deployment.yaml
 ```
 
 ---
 
 ### 8️⃣ Access the Application
 
-Find the NodePort from `kubectl get services` and access your app at:
-
-```
-http://<vm_public_ip>:<node_port>
-```
+- **Ingress:** Visit `http://fintech.example.com` (update DNS or `/etc/hosts` as needed).
+- **NodePort:** Find the port with `kubectl get services` and access via `http://<instance_public_ip>:<node_port>`
 
 ---
 
 ### 9️⃣ Clean Up
-
-To destroy all resources created by Terraform:
 
 ```sh
 cd cloud/terraform
@@ -172,7 +175,7 @@ terraform destroy
 
 ## 🧑‍💻 Troubleshooting
 
-- Ensure your OpenStack security group allows inbound SSH (22), HTTP (80), and HTTPS (443).
+- Ensure your AWS security group allows inbound SSH (22), HTTP (80), HTTPS (443).
 - If you encounter issues with Kubernetes, check pod logs:
   ```sh
   kubectl get pods
@@ -187,4 +190,4 @@ MIT
 
 ---
 
-> **Ready to innovate? Fork, clone, and launch your AI-powered fintech platform today!**
+> **Ready to innovate? Fork, clone, and launch your AI-powered fintech platform on AWS today!**
