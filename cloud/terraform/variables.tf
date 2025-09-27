@@ -1,10 +1,7 @@
-variable "os_username" {}
-variable "os_password" {}
-variable "os_auth_url" {}
-variable "os_tenant_name" {}
-variable "os_region" {}
+variable "aws_region" { default = "us-east-1" }
+variable "aws_availability_zone" { default = "us-east-1a" }
+variable "vpc_cidr" { default = "10.0.0.0/16" }
 variable "subnet_cidr" { default = "10.0.1.0/24" }
-variable "gateway_ip" { default = "10.0.1.1" }
 variable "admin_ssh_public_key" {}
-variable "image_name" { default = "Ubuntu 18.04" }
-variable "flavor_name" { default = "m1.small" }
+variable "ami_id" { default = "ami-0c94855ba95c71c99" }
+variable "instance_type" { default = "t2.micro" }
