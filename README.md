@@ -64,15 +64,15 @@ cd fintech-devops-app
 Edit `cloud/terraform/terraform.tfvars`:
 
 ```hcl
-azure_location        = "eastus"
-vnet_cidr             = "10.0.0.0/16"
-subnet_cidr           = "10.0.1.0/24"
-vm_size               = "Standard_B1s"
-admin_username        = "azureuser"
-admin_ssh_public_key  = "ssh-rsa AAAA...your-public-key..."
+azure_location        = "Location"
+vnet_cidr             = "Your Vnet address"
+subnet_cidr           = "Your Subnet address"
+vm_size               = "Your VM size"
+admin_username        = "Your VM username"
+admin_ssh_public_key  = "Your Public key"
 image_publisher       = "Canonical"
-image_offer           = "UbuntuServer"
-image_sku             = "18.04-LTS"
+image_offer           = "Your image name"
+image_sku             = "Your Image SKU"
 ```
 
 ---
