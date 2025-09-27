@@ -1,42 +1,50 @@
-# 🚀 Fintech DevOps App on AWS
+# 🚀 Fintech DevOps App on Azure
 
-> **Automate. Containerize. Scale. Empower your fintech innovation with AI microservices and cloud-native DevOps on AWS!**
+> **Automate. Containerize. Scale. Empower your fintech innovation with AI microservices and cloud-native DevOps on Azure!**
 
 ---
 
-## 🌟 What Does This App Do?
+## 🌟 Overview
 
-The **Fintech DevOps App** is a cloud-native platform designed for financial technology solutions. It automates the provisioning of cloud infrastructure on AWS, deploys a secure and scalable fintech application, and integrates multiple AI-powered microservices for advanced financial analytics.
+The **Fintech DevOps App** is a cloud-native platform for financial technology solutions. It automates Azure infrastructure provisioning using Terraform, deploys a secure and scalable fintech application, and integrates multiple AI-powered microservices for advanced analytics.
 
-**Key AI Features:**
+---
+
+## 💡 Key Features & Benefits
+
 - **Fraud Detection:** Instantly flag suspicious transactions to reduce financial risk.
 - **Virtual Assistant:** Provide automated customer support and query resolution.
 - **Credit Scoring:** Assess user creditworthiness for loans and financial products.
 - **Portfolio Optimization:** Help users maximize investment returns and minimize risk.
 - **Predictive Analytics:** Forecast financial trends, user activity, and revenue.
-
----
-
-## 💡 Real-Life Benefits
-
-- **Enhanced Security:** AI-driven fraud detection protects users and institutions from financial crime.
-- **Better Customer Experience:** Virtual assistants automate support, improving response times and satisfaction.
-- **Smarter Lending:** Automated credit scoring enables faster, fairer loan approvals.
-- **Optimized Investments:** Portfolio optimization helps users make smarter investment decisions.
-- **Data-Driven Insights:** Predictive analytics empower businesses to anticipate trends and make informed decisions.
-- **Scalability & Automation:** Infrastructure as Code and Kubernetes orchestration allow rapid scaling and easy management.
-- **Cost Efficiency:** AWS and containerization reduce infrastructure costs and improve resource utilization.
+- **Scalable & Secure:** Uses Azure resources, network security groups, and SSH authentication.
+- **Automated Deployment:** Infrastructure as Code with Terraform and container orchestration with Kubernetes.
 
 ---
 
 ## 🛠️ Prerequisites
 
-- ✅ AWS account & credentials
-- ✅ [Terraform](https://developer.hashicorp.com/terraform/downloads)
-- ✅ [kubectl](https://kubernetes.io/docs/tasks/tools/)
-- ✅ SSH key pair for EC2 access
-- ✅ [Docker](https://docs.docker.com/get-docker/) (for building/pushing images)
-- ✅ Access to a container registry (e.g., Docker Hub, Amazon ECR)
+- Azure account (Free or Pay-As-You-Go)
+- [Terraform](https://developer.hashicorp.com/terraform/downloads)
+- [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli)
+- [kubectl](https://kubernetes.io/docs/tasks/tools/)
+- SSH key pair for VM access
+- [Docker](https://docs.docker.com/get-docker/) (for building/pushing images)
+- Access to a container registry (e.g., Docker Hub, Azure Container Registry)
+
+---
+
+## 📦 Project Structure
+
+```
+fintech-devops-app/
+│
+├── ai-services/                # AI microservices (Fraud, Credit, etc.)
+├── fintech-app/                # Main fintech application
+├── k8s/                        # Kubernetes manifests
+├── cloud/terraform/            # Terraform scripts for Azure
+└── README.md
+```
 
 ---
 
@@ -56,55 +64,57 @@ cd fintech-devops-app
 Edit `cloud/terraform/terraform.tfvars`:
 
 ```hcl
-aws_region           = "Your region"
-aws_availability_zone = "Your zone"
-vpc_cidr             = "Your vpc cidr"
-subnet_cidr          = "Your subnet cidr"
-admin_ssh_public_key = "ssh-rsa AAAA...your-public-key..."
-ami_id               = "Your ami id"
-instance_type        = "Your instance type"
+azure_location        = "eastus"
+vnet_cidr             = "10.0.0.0/16"
+subnet_cidr           = "10.0.1.0/24"
+vm_size               = "Standard_B1s"
+admin_username        = "azureuser"
+admin_ssh_public_key  = "ssh-rsa AAAA...your-public-key..."
+image_publisher       = "Canonical"
+image_offer           = "UbuntuServer"
+image_sku             = "18.04-LTS"
 ```
 
 ---
 
-### 3️⃣ Provision Infrastructure with Terraform
+### 3️⃣ Provision Azure Infrastructure with Terraform
 
 ```sh
 cd cloud/terraform
 terraform init
 terraform apply
 ```
-
-- This will create a VPC, subnet, security group, and a Linux EC2 instance.
-- Outputs will show the instance ID and public IP.
+- Type `yes` when prompted.
+- Note the output: VM public IP, VNet, subnet, and NSG IDs.
 
 ---
 
-### 4️⃣ SSH into the EC2 Instance
-
-Get the public IP from Terraform output or AWS Console:
+### 4️⃣ SSH into the Azure VM
 
 ```sh
-ssh ec2-user@<instance_public_ip>
+ssh azureuser@<public_ip_address>
 ```
+- Use the private key corresponding to your `admin_ssh_public_key`.
 
 ---
 
-### 5️⃣ Install Kubernetes on the EC2 Instance
+### 5️⃣ Install Docker and Kubernetes on the VM
 
 ```sh
 # Update & install Docker
-sudo yum update -y
-sudo amazon-linux-extras install docker
+sudo apt-get update
+sudo apt-get install -y docker.io
 sudo systemctl enable docker
 sudo systemctl start docker
 
 # Install Kubernetes tools
-curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl"
-chmod +x ./kubectl
-sudo mv ./kubectl /usr/local/bin/kubectl
+sudo apt-get install -y apt-transport-https ca-certificates curl
+sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
+echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+sudo apt-get update
+sudo apt-get install -y kubelet kubeadm kubectl
+sudo apt-mark hold kubelet kubeadm kubectl
 
-# Install kubeadm and kubelet (see official docs for Amazon Linux)
 # Initialize Kubernetes (single node)
 sudo kubeadm init --pod-network-cidr=10.244.0.0/16
 
@@ -121,7 +131,7 @@ kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documen
 
 ### 6️⃣ Build and Push Docker Images
 
-Build and push your app and AI microservices:
+On your local machine:
 
 ```sh
 # Main fintech app
@@ -135,12 +145,13 @@ docker build -t your-docker-repo/fraud-detection:latest .
 docker push your-docker-repo/fraud-detection:latest
 # ...repeat for other AI services
 ```
-
-Update image names in `k8s/deployment.yaml` and other manifests.
+- Update image names in Kubernetes manifests (`k8s/*.yaml`).
 
 ---
 
 ### 7️⃣ Deploy to Kubernetes
+
+On the VM:
 
 ```sh
 kubectl apply -f k8s/deployment.yaml
@@ -160,22 +171,23 @@ kubectl apply -f k8s/predictive-analytics-deployment.yaml
 ### 8️⃣ Access the Application
 
 - **Ingress:** Visit `http://fintech.example.com` (update DNS or `/etc/hosts` as needed).
-- **NodePort:** Find the port with `kubectl get services` and access via `http://<instance_public_ip>:<node_port>`
+- **NodePort:** Access via `http://<public_ip_address>:<node_port>`
 
 ---
 
-### 9️⃣ Clean Up
+### 9️⃣ Clean Up Resources
 
 ```sh
 cd cloud/terraform
 terraform destroy
 ```
+- Type `yes` when prompted.
 
 ---
 
 ## 🧑‍💻 Troubleshooting
 
-- Ensure your AWS security group allows inbound SSH (22), HTTP (80), HTTPS (443).
+- Ensure your Azure NSG allows inbound SSH (22), HTTP (80), HTTPS (443).
 - If you encounter issues with Kubernetes, check pod logs:
   ```sh
   kubectl get pods
@@ -186,8 +198,8 @@ terraform destroy
 
 ## 📄 License
 
-MIT
+AI
 
 ---
 
-> **Ready to innovate? Fork, clone, and launch your AI-powered fintech platform on AWS today!**
+> **Ready to innovate? Fork, clone, and launch your AI-powered fintech platform on Azure today!**
