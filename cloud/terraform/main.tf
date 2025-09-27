@@ -1,79 +1,87 @@
 terraform {
   required_providers {
-    openstack = {
-      source  = "terraform-provider-openstack/openstack"
-      version = ">= 1.51.0"
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 5.0.0"
     }
   }
 }
 
-provider "openstack" {
-  user_name   = var.os_username
-  tenant_name = var.os_tenant_name
-  password    = var.os_password
-  auth_url    = var.os_auth_url
-  region      = var.os_region
+provider "aws" {
+  region = var.aws_region
 }
 
-resource "openstack_networking_network_v2" "fintech_net" {
-  name = "fintech-net"
-}
-
-resource "openstack_networking_subnet_v2" "fintech_subnet" {
-  name            = "fintech-subnet"
-  network_id      = openstack_networking_network_v2.fintech_net.id
-  cidr            = var.subnet_cidr
-  ip_version      = 4
-  gateway_ip      = var.gateway_ip
-}
-
-resource "openstack_compute_keypair_v2" "fintech_key" {
-  name       = "fintech-key"
-  public_key = var.admin_ssh_public_key
-}
-
-resource "openstack_compute_instance_v2" "fintech_vm" {
-  name            = "fintech-vm"
-  image_name      = var.image_name
-  flavor_name     = var.flavor_name
-  key_pair        = openstack_compute_keypair_v2.fintech_key.name
-  security_groups = [openstack_networking_secgroup_v2.fintech_secgroup.name]
-
-  network {
-    uuid = openstack_networking_network_v2.fintech_net.id
+resource "aws_vpc" "fintech_vpc" {
+  cidr_block = var.vpc_cidr
+  tags = {
+    Name = "fintech-vpc"
   }
 }
 
-resource "openstack_networking_secgroup_v2" "fintech_secgroup" {
-  name = "fintech-secgroup"
+resource "aws_subnet" "fintech_subnet" {
+  vpc_id                  = aws_vpc.fintech_vpc.id
+  cidr_block              = var.subnet_cidr
+  map_public_ip_on_launch = true
+  availability_zone       = var.aws_availability_zone
+  tags = {
+    Name = "fintech-subnet"
+  }
 }
 
-resource "openstack_networking_secgroup_rule_v2" "allow_ssh" {
-  direction         = "ingress"
-  ethertype         = "IPv4"
-  protocol          = "tcp"
-  port_range_min    = 22
-  port_range_max    = 22
-  remote_ip_prefix  = "0.0.0.0/0"
-  security_group_id = openstack_networking_secgroup_v2.fintech_secgroup.id
+resource "aws_security_group" "fintech_sg" {
+  name        = "fintech-sg"
+  description = "Fintech security group"
+  vpc_id      = aws_vpc.fintech_vpc.id
+
+  ingress {
+    description      = "Allow SSH"
+    from_port        = 22
+    to_port          = 22
+    protocol         = "tcp"
+    cidr_blocks      = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description      = "Allow HTTP"
+    from_port        = 80
+    to_port          = 80
+    protocol         = "tcp"
+    cidr_blocks      = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description      = "Allow HTTPS"
+    from_port        = 443
+    to_port          = 443
+    protocol         = "tcp"
+    cidr_blocks      = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "fintech-sg"
+  }
 }
 
-resource "openstack_networking_secgroup_rule_v2" "allow_http" {
-  direction         = "ingress"
-  ethertype         = "IPv4"
-  protocol          = "tcp"
-  port_range_min    = 80
-  port_range_max    = 80
-  remote_ip_prefix  = "0.0.0.0/0"
-  security_group_id = openstack_networking_secgroup_v2.fintech_secgroup.id
+resource "aws_key_pair" "fintech_key" {
+  key_name   = "fintech-key"
+  public_key = var.admin_ssh_public_key
 }
 
-resource "openstack_networking_secgroup_rule_v2" "allow_https" {
-  direction         = "ingress"
-  ethertype         = "IPv4"
-  protocol          = "tcp"
-  port_range_min    = 443
-  port_range_max    = 443
-  remote_ip_prefix  = "0.0.0.0/0"
-  security_group_id = openstack_networking_secgroup_v2.fintech_secgroup.id
+resource "aws_instance" "fintech_vm" {
+  ami                    = var.ami_id
+  instance_type          = var.instance_type
+  subnet_id              = aws_subnet.fintech_subnet.id
+  vpc_security_group_ids = [aws_security_group.fintech_sg.id]
+  key_name               = aws_key_pair.fintech_key.key_name
+
+  tags = {
+    Name = "fintech-vm"
+  }
 }

@@ -1,1 +1,7 @@
+aws_region           = "us-east-1"
+aws_availability_zone = "us-east-1a"
+vpc_cidr             = "10.0.0.0/16"
+subnet_cidr          = "10.0.1.0/24"
 admin_ssh_public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQClEuwYqz+KZwjBLbgwwjYAWU/ZIy1jazf6XI6Z0icjsMKpKEQm59ancLnUHzXHvzA5Q+B2E4DMSGg85Nvpse7ER3miyTBsdRRx8z00Pdh0LSsGJXsSYAxQ82j1HoCdKT4mW129+KcGsaTqbEQpiGMx9SR5cLoTORuBzsd/uVtyqoT59wqwGfTXz30llOAaNsqvjm9NRDrDNMmsklOFnzsf6Lx9QeVgH+dan27BJRhISC5TYILTLcbtLazieVpUAxfcC97SXI0StWfqCr+nreRh6SHROklItIMDHR/Cce9LMo1u1Y2HQ/PdoGnwKNPfNBCDixCPXBl37io1/tjnqvLlOHU7yJ4z/kqD0wl87FrtCQVYokbJ7zBSXh2Al5O1PyK9wxOpDYoWaJfwYOLY/xYsk3a7LrAV3b1VmA3r9ZsnVYyBFjfJAL3nfiWBiUwoPK9F6pkt5NEwTtHXCRDxDxlhYMH+4yUtoSDrDCgK4c6r1g+JH6j5GncMZ643JNNyJMVJBcGnH2/Lp5tW18ocjV6Dt/Liz3w6Ulsn5fIzOC4B+E9OaAHhsT2Sn/TH+PqxK0e32+j9cAzrWzd7wYUdVI9svwijszyeG6y586ZsonhrjLtAtlWY8giLd14Sc3X871ZHLli8YC/AUdw/QpqzIWtY4N+X1lx3/xozTkH0irMXVw== one_r@Umang"
+ami_id               = "ami-0c94855ba95c71c99"
+instance_type        = "t2.micro"
