@@ -9,6 +9,7 @@ terraform {
 
 provider "azurerm" {
   features {}
+  subscription_id = "32830951-59a1-4f02-a298-0318d174d14a"
 }
 
 resource "azurerm_resource_group" "fintech_rg" {
