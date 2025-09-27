@@ -1,24 +1,24 @@
-output "vpc_id" {
-  description = "The ID of the AWS VPC"
-  value       = aws_vpc.fintech_vpc.id
+output "vnet_id" {
+  description = "The ID of the Azure Virtual Network"
+  value       = azurerm_virtual_network.fintech_vnet.id
 }
 
 output "subnet_id" {
-  description = "The ID of the AWS Subnet"
-  value       = aws_subnet.fintech_subnet.id
+  description = "The ID of the Azure Subnet"
+  value       = azurerm_subnet.fintech_subnet.id
 }
 
-output "security_group_id" {
-  description = "The ID of the AWS Security Group"
-  value       = aws_security_group.fintech_sg.id
+output "nsg_id" {
+  description = "The ID of the Azure Network Security Group"
+  value       = azurerm_network_security_group.fintech_nsg.id
 }
 
-output "instance_id" {
-  description = "The ID of the AWS EC2 Instance"
-  value       = aws_instance.fintech_vm.id
+output "vm_id" {
+  description = "The ID of the Azure Virtual Machine"
+  value       = azurerm_linux_virtual_machine.fintech_vm.id
 }
 
-output "instance_public_ip" {
-  description = "The public IP of the AWS EC2 Instance"
-  value       = aws_instance.fintech_vm.public_ip
+output "public_ip_address" {
+  description = "The public IP address of the VM"
+  value       = azurerm_public_ip.fintech_public_ip.ip_address
 }
