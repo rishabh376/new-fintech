@@ -7,9 +7,11 @@ terraform {
   }
 }
 
+data "azurerm_subscription" "primary" {}
+
 provider "azurerm" {
   features {}
-  subscription_id = "32830951-59a1-4f02-a298-0318d174d14a"
+  subscription_id = data.azurerm_subscription.primary.subscription_id
 }
 
 resource "azurerm_resource_group" "fintech_rg" {
@@ -77,7 +79,7 @@ resource "azurerm_public_ip" "fintech_public_ip" {
   name                = "fintech-public-ip"
   location            = azurerm_resource_group.fintech_rg.location
   resource_group_name = azurerm_resource_group.fintech_rg.name
-  allocation_method   = "Dynamic"
+  allocation_method   = "Static"
 }
 
 resource "azurerm_network_interface" "fintech_nic" {
